@@ -27,8 +27,15 @@ func (cfg apiConfig) getAssetURL(assetPath string) string {
 	return fmt.Sprintf("http://localhost:%s/assets/%s", cfg.port, assetPath)
 }
 
-func (cfg apiConfig) getVideoAssetURL(key string) string {
-	return  fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, key)
+func (cfg apiConfig) getVideoAssetURL(key, aspectRatio string) string {
+	ratio := "other"
+	if aspectRatio == "16:9" {
+		ratio = "landscape"
+	}
+	if aspectRatio == "9:16" {
+		ratio = "portrait"
+	}
+	return  fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s/%s", cfg.s3Bucket, cfg.s3Region, ratio, key)
 }
 
 func mediaTypeToExt(mediaType string) string {
