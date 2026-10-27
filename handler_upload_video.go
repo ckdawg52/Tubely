@@ -1,14 +1,15 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"io"
 	"mime"
 	"net/http"
 	"os"
-	"crypto/rand"
-	"encoding/base64"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
 )
@@ -74,18 +75,6 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	}
 	encoded := base64.RawURLEncoding.EncodeToString(key)
 
-	assetPath := getAssetPath(encoded, mediaType)
-
-	params := s3.PutObjectInput{
-		Bucket: &cfg.s3Bucket,
-		Key: &assetPath,
-		Body: tmp,
-		ContentType: &mediaType,
-
-	}
-
-	_, err = cfg.s3Client.PutObject(r.Context(), &params)
-
 	video, err := cfg.db.GetVideo(videoID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't find video", err)
@@ -96,7 +85,23 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	url := cfg.getVideoAssetURL(encoded)
+	assetPath := getAssetPath(encoded, mediaType)
+
+	params := s3.PutObjectInput{
+		Bucket:      &cfg.s3Bucket,
+		Key:         &assetPath,
+		ACL:         types.ObjectCannedACLPublicRead,
+		Body:        tmp,
+		ContentType: &mediaType,
+	}
+
+	_, err = cfg.s3Client.PutObject(r.Context(), &params)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to upload video", err)
+		return
+	}
+
+	url := cfg.getVideoAssetURL(assetPath)
 	video.VideoURL = &url
 
 	err = cfg.db.UpdateVideo(video)
