@@ -2,9 +2,10 @@ package main
 
 import (
 	"bytes"
-	"os/exec"
 	"encoding/json"
 	"fmt"
+	"math"
+	"os/exec"
 )
 
 type VideoAspectJSON struct {
@@ -96,7 +97,7 @@ func getVideoAspectRatio(filePath string) (string, error) {
 	var videoAspect VideoAspectJSON
 	if err = json.Unmarshal(data.Bytes(), &videoAspect); err != nil {
 		return "", fmt.Errorf("Failed to Unmarshel data: %v", err)
-	} 
+	}
 	var videoWidth int
 	var videoHeight int
 	for _, stream := range videoAspect.Streams {
@@ -105,22 +106,18 @@ func getVideoAspectRatio(filePath string) (string, error) {
 			videoHeight = stream.Height
 		}
 	}
-	r := GCD(videoWidth, videoHeight)
-	w := int(videoWidth/r)
-	h := int(videoHeight/r)
+	ratio := float64(videoWidth) / float64(videoHeight)
 
-	if w == 16 && h == 9 {
+	const tolerance = 0.02 // wiggle room
+
+	landscapeRatio := 16.0 / 9.0
+	portraitRatio := 9.0 / 16.0
+
+	if math.Abs(ratio-landscapeRatio) < tolerance {
 		return "16:9", nil
 	}
-	if w == 9 && h == 16 {
+	if math.Abs(ratio-portraitRatio) < tolerance {
 		return "9:16", nil
 	}
 	return "other", nil
-}
-
-func GCD(a, b int) int {
-	for b != 0 {
-		a, b = b, a % b
-	}
-	return a
 }
