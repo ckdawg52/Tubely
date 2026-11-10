@@ -7,6 +7,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"os/exec"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -121,4 +122,14 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondWithJSON(w, http.StatusOK, video)
+}
+
+func processVideoForFastStart(filePath string) (string, error) {
+	filePath += ".processing"
+	cmd := exec.Command("ffmpeg", "-i", filePath, "-c", "copy", "-movflags", "faststart", "-f", "mp4")
+	err:= cmd.Run()
+	if err != nil {
+		return "", err
+	}
+	cmd.Stdout
 }
