@@ -58,6 +58,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	tmp, err := os.CreateTemp("", "tubely-upload.mp4")
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create temporary file", err)
+		return
 	}
 	defer os.Remove(tmp.Name())
 	defer tmp.Close()
@@ -98,11 +99,26 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 
 	paramKey := cfg.getVideoAssetKey(assetPath, aspectRatio)
 
+	vidFast, err := processVideoForFastStart(tmp.Name())
+
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to process video", err)
+		return
+	}
+
+	vid, err := os.Open(vidFast)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to open video", err)
+		return
+	}
+
+	defer vid.Close()
+
 	params := s3.PutObjectInput{
 		Bucket:      &cfg.s3Bucket,
 		Key:         &paramKey,
 		ACL:         types.ObjectCannedACLPublicRead,
-		Body:        tmp,
+		Body:        vid,
 		ContentType: &mediaType,
 	}
 
@@ -125,11 +141,11 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 }
 
 func processVideoForFastStart(filePath string) (string, error) {
-	filePath += ".processing"
-	cmd := exec.Command("ffmpeg", "-i", filePath, "-c", "copy", "-movflags", "faststart", "-f", "mp4")
-	err:= cmd.Run()
+	newFilePath := filePath + ".processing"
+	cmd := exec.Command("ffmpeg", "-i", filePath, "-c", "copy", "-movflags", "faststart", "-f", "mp4", newFilePath)
+	err := cmd.Run()
 	if err != nil {
 		return "", err
 	}
-	cmd.Stdout
+	return newFilePath, nil
 }
