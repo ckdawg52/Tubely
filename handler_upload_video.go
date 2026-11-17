@@ -75,7 +75,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusInternalServerError, "Failed to create file path", err)
 		return
 	}
-	encoded := base64.RawURLEncoding.EncodeToString(key)
+	encodedKey := base64.RawURLEncoding.EncodeToString(key)
 
 	video, err := cfg.db.GetVideo(videoID)
 	if err != nil {
@@ -87,7 +87,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	assetPath := getAssetPath(encoded, mediaType)
+	assetPath := getAssetPath(encodedKey, mediaType)
 
 	aspectRatio, err := getVideoAspectRatio(tmp.Name())
 	if err != nil {
@@ -128,7 +128,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	url := cfg.getVideoAssetURL(assetPath, aspectRatio)
+	url := cfg.s3Bucket + "," + cfg.getVideoAssetURL(assetPath, aspectRatio)
 	video.VideoURL = &url
 
 	err = cfg.db.UpdateVideo(video)
@@ -148,4 +148,8 @@ func processVideoForFastStart(filePath string) (string, error) {
 		return "", err
 	}
 	return newFilePath, nil
+}
+
+generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration) (string, error) {
+	
 }
