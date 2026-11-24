@@ -150,6 +150,7 @@ func processVideoForFastStart(filePath string) (string, error) {
 	return newFilePath, nil
 }
 
-generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration) (string, error) {
-	
+func generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration) (string, error) {
+	presignClient := s3.NewPresignClient(s3Client)
+	presignClient.PresignGetObject()
 }
